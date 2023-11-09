@@ -23,6 +23,10 @@ import com.batch.springbatchservice.model.Person;
 
 @Configuration
 public class BatchConfiguration {
+	
+	
+	// NOTE : IF U GET "UnsupportedClassVersionError", THIS PROJECT WILL ONLY RUN IN JAVA 17. (no need to change any java version in pom.xml, let it be 11. just change eclipse java into 17)
+	
 
 	// READER >>>>>>>>>>>>>>>>>>>
 	@Bean
