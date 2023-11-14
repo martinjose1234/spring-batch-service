@@ -14,6 +14,7 @@ import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilde
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -24,9 +25,12 @@ import com.batch.springbatchservice.model.Person;
 @Configuration
 public class BatchConfiguration {
 	
+	@Autowired
+	DataSource dataSource;
 	
 	// NOTE : IF U GET "UnsupportedClassVersionError", THIS PROJECT WILL ONLY RUN IN JAVA 17. (no need to change any java version in pom.xml, let it be 11. just change eclipse java into 17)
 	
+	// NOTE : IN THIS EG WE READING DATA FROM CSV FILE AND PROCESSING AND WRITING RESULT INTO DB (CSV -> DB). FOR DB -> CSV PLEASE REFER WORK TIPS->SPTING BATCH FOLDER. 
 
 	// READER >>>>>>>>>>>>>>>>>>>
 	@Bean
@@ -49,7 +53,7 @@ public class BatchConfiguration {
 
 	// WRITER >>>>>>>>>>>>>>>>>>>
 	@Bean
-	public JdbcBatchItemWriter<Person> writer(DataSource dataSource) {
+	public JdbcBatchItemWriter<Person> writer() {
 		return new JdbcBatchItemWriterBuilder<Person>()
 				.itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
 				.sql("INSERT INTO people (first_name, last_name) VALUES (:firstName, :lastName)").dataSource(dataSource)
@@ -58,19 +62,18 @@ public class BatchConfiguration {
 
 	// STEP BUILDER >>>>>>>>>>>>>
 	@Bean
-	public Step step1(JobRepository jobRepository, PlatformTransactionManager transactionManager,
-			JdbcBatchItemWriter<Person> writer) {
+	public Step step1(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
 		return new StepBuilder("step1", jobRepository).<Person, Person>chunk(10, transactionManager)
 				.reader(reader())
 				.processor(processor())
-				.writer(writer).build();
+				.writer(writer()).build();
 	}
 
-	// JOB BUILDER >>>>>>>>>>>>>>
+	// JOB BUILDER >>>>>>>>>>>>>> (Job Builder will automatically take step1 bean)
 	@Bean
-	public Job importUserJob(JobRepository jobRepository, JobCompletionNotificationListener listener, Step step1) {
+	public Job importUserJob(JobRepository jobRepository, JobCompletionNotificationListener listener, Step step) {
 		return new JobBuilder("importUserJob", jobRepository).incrementer(new RunIdIncrementer()).listener(listener) // <<< JOB COMPLETION NOTIFICATION LISTENER (JobCompletionNotificationListener.java)
-				.flow(step1).end().build();
+				.flow(step).end().build();
 	}
 
 }
